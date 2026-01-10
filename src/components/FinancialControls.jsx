@@ -29,7 +29,7 @@ const FinancialControls = () => {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left Side: Select User List */}
+
         <div className="w-full lg:w-[350px] bg-[#0a111a] border border-gray-800 rounded-2xl p-5 shadow-lg">
           <h3 className="text-sm font-semibold mb-4">Select User</h3>
           <div className="relative mb-4">
@@ -78,7 +78,7 @@ const FinancialControls = () => {
           <h3 className="text-lg font-medium mb-6">Balance Adjustment</h3>
 
           <div className="space-y-6">
-            {/* Selected User Info Box */}
+
             <div>
               <p className="text-xs text-gray-400 mb-2 font-medium">
                 Selected User:

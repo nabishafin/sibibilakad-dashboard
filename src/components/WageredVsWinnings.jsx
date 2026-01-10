@@ -55,7 +55,7 @@ const WageredChart = () => {
         <h2 style={{ fontSize: '24px', fontWeight: '500', margin: 0 }}>Wagered vs Winnings</h2>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          {/* Dropdown Placeholder */}
+
           <div style={{ fontSize: '14px', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
             May 2022 - Oct 2022 <span style={{ marginLeft: '8px', fontSize: '10px' }}>▼</span>
           </div>
@@ -90,7 +90,6 @@ const WageredChart = () => {
               tickLine={false}
               tick={{ fill: '#475569', fontSize: 14 }}
               dy={15}
-              // Adjusting interval to show specific dates like in the image
               interval={5} 
             />
             <YAxis 
@@ -117,7 +116,6 @@ const WageredChart = () => {
               activeDot={{ r: 6 }}
             />
 
-            {/* Wagered Line */}
             <Area
               type="monotone"
               dataKey="wagered"

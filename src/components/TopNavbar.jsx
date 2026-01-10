@@ -76,7 +76,6 @@ const Header = ({ onLogout }) => {
 
   return (
     <div className="relative bg-[#0E1624] h-20 px-6 flex items-center justify-between border-b border-white">
-      {/* 1. Search Bar */}
       <div className="relative w-96">
         <Search className="absolute left-3 top-2.5 text-gray-500" size={18} />
         <input

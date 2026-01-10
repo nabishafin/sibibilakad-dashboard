@@ -52,7 +52,7 @@ const Sidebar = ({ onLogout, isOpen, setIsOpen }) => {
 
   return (
     <>
-      {/* Mobile Overlay */}
+
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-40 lg:hidden"
@@ -60,7 +60,6 @@ const Sidebar = ({ onLogout, isOpen, setIsOpen }) => {
         />
       )}
 
-      {/* Main Sidebar */}
       <div
         className={`
         fixed top-0 left-0 z-50 h-full w-64 bg-[#0E1624] flex flex-col transition-transform duration-300 ease-in-out border-r border-white
@@ -68,7 +67,6 @@ const Sidebar = ({ onLogout, isOpen, setIsOpen }) => {
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
       `}
       >
-        {/* Close Button for Mobile */}
         <button
           className="lg:hidden absolute top-4 right-4 text-gray-400"
           onClick={() => setIsOpen(false)}
@@ -76,14 +74,14 @@ const Sidebar = ({ onLogout, isOpen, setIsOpen }) => {
           <X size={24} />
         </button>
 
-        {/* Logo Section */}
+
         <div className="p-5 flex items-center justify-center ">
           <img src={MyLogo} alt="" />
         </div>
 
         <hr className="border-white  mb-4" />
 
-        {/* Navigation Links */}
+
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
           {menuItems.map((item) => (
             <NavLink

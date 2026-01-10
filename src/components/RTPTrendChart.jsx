@@ -75,9 +75,9 @@ const RTPTrendChart = () => {
           />
 
           <Area
-            type="monotone" // This makes the line curvy like your image
+            type="monotone" 
             dataKey="rtp"
-            stroke="#2dd4bf" // Teal color
+            stroke="#2dd4bf" 
             strokeWidth={2}
             fillOpacity={1}
             fill="url(#colorRtp)"

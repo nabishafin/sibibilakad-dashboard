@@ -205,7 +205,6 @@ const RoundExplorer = () => {
         </table>
       </div>
 
-      {/* Modal remains exactly the same as your code */}
       {selectedRound && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-[#111827] w-full max-w-[600px] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">

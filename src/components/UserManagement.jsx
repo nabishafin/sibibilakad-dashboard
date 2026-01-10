@@ -365,7 +365,7 @@ const UserManagement = () => {
               )}
             </div>
 
-            {/* Modal Footer Buttons */}
+
             <div className="p-4 flex gap-3 border-t border-gray-800 bg-[#0f172a]">
               <button className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-[#0b1221] text-xs font-bold py-2.5 rounded-lg transition uppercase">
                 Adjust Balance
