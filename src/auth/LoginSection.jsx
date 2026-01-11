@@ -1,21 +1,72 @@
 import React, { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router-dom";
 import sideLogo from "../assets/Frame 2147229686.png"
+import { useLoginMutation } from "../redux/features/auth/authApi";
+import { useDispatch } from "react-redux";
+import { setLogin } from "../redux/slices/authSlice";
 
 const LoginSection = () => {
   const [formData, setFormData] = useState({
-    identifier: "",
+    identifier: "", // keeping identifier as per your existing code, assuming backend handles email/username
     password: "",
   });
+  const [error, setError] = useState("");
+
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const [login, { isLoading }] = useLoginMutation();
+
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(""); // clear error on change
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    try {
+      // Backend likely expects 'email' or 'username'. If backend accepts 'identifier', keep it. 
+      // Adapting to standard 'email' if identifier looks like one, or passing as is if backend supports it.
+      // Assuming backend takes { email, password } based on typical setups, or { identifier, password }.
+      // Let's pass it as 'email' if the field name in backend is email, but here we use formData as is.
+      // Checking authApi.js, it passes `loginData` directly. 
+      // Let's assume backend expects 'email' and 'password'. 
+      // If the user input 'identifier' is meant to be mapped to 'email':
+      const loginData = {
+        usernameOrEmail: formData.identifier,
+        password: formData.password
+      };
 
-    console.log("Logging in with:", formData);
+      const res = await login(loginData).unwrap();
+
+      // Based on user provided structure:
+      // {
+      //     "code": 200,
+      //     "success": true,
+      //     "message": "Login successful",
+      //     "data": {
+      //         "accessToken": "...",
+      //         "refreshToken": "...",
+      //         "user": { ... }
+      //     }
+      // }
+
+      const { accessToken, refreshToken, user } = res.data || {};
+
+      if (accessToken) {
+        dispatch(setLogin({ user, token: accessToken, refreshToken }));
+        localStorage.setItem("token", accessToken);
+        if (user) localStorage.setItem("user", JSON.stringify(user));
+        if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+        navigate("/dashboard");
+      } else {
+        setError("Login failed: No access token received.");
+      }
+
+    } catch (err) {
+      console.error("Login failed", err);
+      setError(err?.data?.message || "Login failed. Please check your credentials.");
+    }
   };
 
   return (
@@ -23,6 +74,7 @@ const LoginSection = () => {
       <div className="flex flex-col justify-center w-full lg:w-1/2 px-8 md:px-24 lg:px-32 bg-[#1e293b]">
         <div className="max-w-md w-full mx-auto">
           <h2 className="text-3xl font-semibold mb-2">Login to your account</h2>
+          {error && <p className="text-red-500 mb-4 text-sm">{error}</p>}
           <p className="text-gray-400 mb-8">
             Don't have an account?{" "}
             <Link to={"/register"}>
@@ -44,6 +96,7 @@ const LoginSection = () => {
                 value={formData.identifier}
                 onChange={handleChange}
                 className="w-full px-4 py-3 rounded-md bg-[#0f172a] border border-gray-700 focus:outline-none focus:border-yellow-500 transition-colors"
+                required
               />
             </div>
 
@@ -58,6 +111,7 @@ const LoginSection = () => {
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full px-4 py-3 rounded-md bg-[#0f172a] border border-gray-700 focus:outline-none focus:border-yellow-500 transition-colors"
+                required
               />
               <button
                 type="button"
@@ -93,14 +147,13 @@ const LoginSection = () => {
               </Link>
             </div>
 
-            <Link to={"/dashboard"}>
-              <button
-                type="submit"
-                className="w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold rounded-md hover:from-yellow-500 hover:to-yellow-700 transform active:scale-[0.98] transition-all shadow-lg"
-              >
-                Play Now
-              </button>
-            </Link>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold rounded-md hover:from-yellow-500 hover:to-yellow-700 transform active:scale-[0.98] transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "Logging in..." : "Play Now"}
+            </button>
           </form>
 
           {/* Divider */}
@@ -131,7 +184,7 @@ const LoginSection = () => {
       <div className="hidden lg:flex flex-col items-center justify-center w-1/2 bg-[#0a101d]">
         <div className="flex items-center space-x-4">
           {/* Logo Placeholder */}
-        <img src={sideLogo} alt="" />
+          <img src={sideLogo} alt="" />
         </div>
       </div>
     </div>

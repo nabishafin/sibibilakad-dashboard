@@ -9,7 +9,7 @@ const Dashboard = () => {
   return (
     <div>
       <OverviewSection />
-      <div className="grid grid-cols-2 gap-4 m-8">
+      <div className="grid grid-cols-2 gap-2 m-8">
         <div>
           <WageredVsWinnings />
         </div>

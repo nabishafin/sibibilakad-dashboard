@@ -10,6 +10,7 @@ import LoginSection from "../auth/LoginSection";
 import RegisterSection from "../auth/RegisterSection";
 import RecoverAccount from "../auth/RecoverAccount";
 import ResetPassword from "../auth/ResetPassword";
+import PrivateRoute from "./PrivateRoute";
 
 const router = createBrowserRouter([
   {
@@ -30,33 +31,39 @@ const router = createBrowserRouter([
   },
   {
     path: "dashboard",
-    element: <DashboardLayout />,
+    element: <PrivateRoute />,
     children: [
       {
-        index: true,
-        element: <Dashboard />,
-      },
-      {
-        path: "users",
-        element: <UserManagementPage />,
-      },
-      {
-        path: "financial",
-        element: <FinancialPage />,
-      },
-      {
-        path: "round-explorer",
-        element: <RoundExplorerPage />,
-      },
-      {
-        path: "system-reports",
-        element: <SystemReportsPage />,
-      },
-      {
-        path: "audit-trail",
-        element: <AuditTrailPage />,
-      },
-    ],
+        path: "",
+        element: <DashboardLayout />,
+        children: [
+          {
+            index: true,
+            element: <Dashboard />,
+          },
+          {
+            path: "users",
+            element: <UserManagementPage />,
+          },
+          {
+            path: "financial",
+            element: <FinancialPage />,
+          },
+          {
+            path: "round-explorer",
+            element: <RoundExplorerPage />,
+          },
+          {
+            path: "system-reports",
+            element: <SystemReportsPage />,
+          },
+          {
+            path: "audit-trail",
+            element: <AuditTrailPage />,
+          },
+        ],
+      }
+    ]
   },
 ]);
 

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router-dom";
 import sideLogo from "../assets/Frame 2147229686.png";
+import { useRegisterMutation } from "../redux/features/auth/authApi";
 
 const RegisterSection = () => {
   const [formData, setFormData] = useState({
@@ -9,6 +10,9 @@ const RegisterSection = () => {
     confirmPassword: "",
     agreed: false,
   });
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const [register, { isLoading }] = useRegisterMutation();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -16,15 +20,37 @@ const RegisterSection = () => {
       ...formData,
       [name]: type === "checkbox" ? checked : value,
     });
+    setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match!");
+      setError("Passwords do not match!");
       return;
     }
-    console.log("Registering user:", formData);
+
+    if (!formData.agreed) {
+      setError("You must agree to the Terms and Privacy Policy.");
+      return;
+    }
+
+    try {
+      const registerData = {
+        email: formData.identifier,
+        password: formData.password
+      };
+
+      await register(registerData).unwrap();
+      // Assuming successful registration redirects to login or auto-logins.
+      // For now, redirect to login page.
+      alert("Registration successful! Please login.");
+      navigate("/");
+
+    } catch (err) {
+      console.error("Registration failed", err);
+      setError(err?.data?.message || "Registration failed. Please try again.");
+    }
   };
 
   return (
@@ -33,6 +59,7 @@ const RegisterSection = () => {
       <div className="flex flex-col justify-center w-full lg:w-1/2 px-8 md:px-24 lg:px-32 bg-[#1e293b]">
         <div className="max-w-md w-full mx-auto">
           <h2 className="text-3xl font-semibold mb-2">Create your account</h2>
+          {error && <p className="text-red-500 mb-4 text-sm">{error}</p>}
           <p className="text-gray-400 mb-8">
             Already have an account?{" "}
             <Link to={"/"}>
@@ -55,6 +82,7 @@ const RegisterSection = () => {
                 value={formData.identifier}
                 onChange={handleChange}
                 className="w-full px-4 py-3 rounded-md bg-[#0f172a] border border-gray-700 focus:outline-none focus:border-yellow-500 transition-colors"
+                required
               />
             </div>
 
@@ -70,6 +98,7 @@ const RegisterSection = () => {
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full px-4 py-3 rounded-md bg-[#0f172a] border border-gray-700 focus:outline-none focus:border-yellow-500 transition-colors"
+                required
               />
               <button
                 type="button"
@@ -104,6 +133,7 @@ const RegisterSection = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 className="w-full px-4 py-3 rounded-md bg-[#0f172a] border border-gray-700 focus:outline-none focus:border-yellow-500 transition-colors"
+                required
               />
               <button
                 type="button"
@@ -151,14 +181,13 @@ const RegisterSection = () => {
               </label>
             </div>
 
-            <Link to={"/dashboard"}>
-              <button
-                type="submit"
-                className="w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold rounded-md hover:from-yellow-500 hover:to-yellow-700 transition-all shadow-lg uppercase tracking-wider"
-              >
-                Play Now
-              </button>
-            </Link>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold rounded-md hover:from-yellow-500 hover:to-yellow-700 transition-all shadow-lg uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "Registering..." : "Play Now"}
+            </button>
           </form>
 
           {/* Divider */}
