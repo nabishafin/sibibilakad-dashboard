@@ -23,14 +23,14 @@ const OverviewSection = () => {
     {
       id: 3,
       title: 'Return to Player (RTP) %',
-      value: `${statsData.data.rtp?.toFixed(2) || '0.00'}%`,
+      value: `${Number(statsData.data.rtp || 0).toFixed(2)}%`,
       change: '+12%',
       icon: <TrendingUp size={20} />,
     },
     {
       id: 4,
       title: 'House Edge %',
-      value: `${statsData.data.edge?.toFixed(2) || '0.00'}%`,
+      value: `${Number(statsData.data.edge || 0).toFixed(2)}%`,
       change: '+12%',
       icon: <BarChart3 size={20} />,
     },

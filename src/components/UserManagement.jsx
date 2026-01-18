@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -11,80 +11,30 @@ import {
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useGetUsersQuery, useGetUserDetailsQuery, useGetUserGameLogsQuery } from "../redux/features/users/usersApi";
 
 const UserManagement = () => {
-  const [users] = useState([
-    {
-      id: 1,
-      username: "User 1",
-      email: "user1@example.com",
-      balance: "50",
-      type: "Regular",
-      status: "Active",
-      lastLogin: "15 Dec 2025, 10:00 pm",
-      joinedDate: "11/14/2025",
-      totalWagered: "22,749.70",
-      totalWon: "25,497.06",
-    },
-    {
-      id: 2,
-      username: "User 2",
-      email: "user2@example.com",
-      balance: "120",
-      type: "Regular",
-      status: "Active",
-      lastLogin: "15 Dec 2025, 11:00 pm",
-      joinedDate: "11/15/2025",
-      totalWagered: "5,000.00",
-      totalWon: "4,200.00",
-    },
-    {
-      id: 4,
-      username: "user4",
-      email: "user4@example.com",
-      balance: "2,797.02",
-      type: "Inactive",
-      status: "Active",
-      lastLogin: "15 Dec 2025, 11:28 pm",
-      joinedDate: "11/14/2025",
-      totalWagered: "22,749.70",
-      totalWon: "25,497.06",
-    },
-    {
-      id: 4,
-      username: "user4",
-      email: "user4@example.com",
-      balance: "2,797.02",
-      type: "Inactive",
-      status: "Active",
-      lastLogin: "15 Dec 2025, 11:28 pm",
-      joinedDate: "11/14/2025",
-      totalWagered: "22,749.70",
-      totalWon: "25,497.06",
-    },
-    {
-      id: 4,
-      username: "user4",
-      email: "user4@example.com",
-      balance: "2,797.02",
-      type: "Inactive",
-      status: "Active",
-      lastLogin: "15 Dec 2025, 11:28 pm",
-      joinedDate: "11/14/2025",
-      totalWagered: "22,749.70",
-      totalWon: "25,497.06",
-    },
-  ]);
-
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [selectedUserId, setSelectedUserId] = useState(null);
   const [activeTab, setActiveTab] = useState("Details");
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const { data: usersData, isLoading, isFetching } = useGetUsersQuery({
+    page,
+    limit,
+    search: debouncedSearch
+  });
+
+  const users = usersData?.data || [];
+  const pagination = usersData?.pagination || {};
 
   const handleExport = () => {
     const doc = new jsPDF("landscape");
@@ -100,21 +50,17 @@ const UserManagement = () => {
       "Status",
       "Joined Date",
       "Last Login",
-      "Total Wagered",
-      "Total Won",
     ];
 
-    const tableRows = filteredUsers.map((u) => [
-      u.id,
+    const tableRows = users.map((u) => [
+      u._id,
       u.username,
       u.email,
       `$${u.balance}`,
       u.type,
       u.status,
-      u.joinedDate,
-      u.lastLogin,
-      `$${u.totalWagered}`,
-      `$${u.totalWon}`,
+      new Date(u.createdAt).toLocaleDateString(),
+      u.lastLogin ? new Date(u.lastLogin).toLocaleString() : "Never",
     ]);
 
     autoTable(doc, {
@@ -141,7 +87,11 @@ const UserManagement = () => {
             type="text"
             placeholder="Search by username or email"
             className="w-full bg-[#0E1624] border border-gray-700 rounded-lg py-2.5 pl-12 pr-4 text-gray-300 focus:outline-none focus:border-teal-500"
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1);
+            }}
           />
         </div>
 
@@ -159,75 +109,109 @@ const UserManagement = () => {
       </div>
 
       <div className="border border-gray-800 rounded-xl overflow-hidden bg-[#0a111a]">
-        <table className="w-full text-left">
-          <thead className="bg-[#1f2937] text-gray-400 text-sm">
-            <tr>
-              <th className="p-4 w-12">
-                <input
-                  type="checkbox"
-                  className="rounded border-gray-600 bg-transparent"
-                />
-              </th>
-              <th className="p-4 font-semibold">Username</th>
-              <th className="p-4 font-semibold">Email</th>
-              <th className="p-4 font-semibold">Balance</th>
-              <th className="p-4 font-semibold">Type</th>
-              <th className="p-4 font-semibold">Status</th>
-              <th className="p-4 font-semibold">Last Login</th>
-              <th className="p-4 font-semibold text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-800">
-            {filteredUsers.map((user) => (
-              <tr
-                key={user.id}
-                className="hover:bg-gray-800/40 transition-colors"
-              >
-                <td className="p-4">
+        <div className="relative overflow-x-auto">
+          {(isLoading || isFetching) && (
+            <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px] z-10 flex items-center justify-center">
+              <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+          <table className="w-full text-left">
+            <thead className="bg-[#1f2937] text-gray-400 text-sm">
+              <tr>
+                <th className="p-4 w-12">
                   <input
                     type="checkbox"
                     className="rounded border-gray-600 bg-transparent"
                   />
-                </td>
-                <td className="p-4 text-sm font-medium">{user.username}</td>
-                <td className="p-4 text-sm text-gray-400">{user.email}</td>
-                <td className="p-4 text-sm font-bold">${user.balance}</td>
-                <td className="p-4 text-sm text-gray-400">{user.type}</td>
-                <td className="p-4">
-                  <span className="bg-teal-500/10 text-teal-400 border border-teal-500/20 px-3 py-1 rounded-md text-[10px] font-bold uppercase">
-                    {user.status}
-                  </span>
-                </td>
-                <td className="p-4 text-sm text-gray-400">{user.lastLogin}</td>
-                <td className="p-4 text-center">
-                  <button
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setActiveTab("Details");
-                    }}
-                    className="text-yellow-500 flex items-center gap-1 mx-auto text-sm font-bold hover:text-yellow-400 uppercase tracking-tighter"
-                  >
-                    <Eye className="w-4 h-4" /> View
-                  </button>
-                </td>
+                </th>
+                <th className="p-4 font-semibold">Username</th>
+                <th className="p-4 font-semibold">Email</th>
+                <th className="p-4 font-semibold">Balance</th>
+                <th className="p-4 font-semibold text-center">Type</th>
+                <th className="p-4 font-semibold text-center">Status</th>
+                <th className="p-4 font-semibold">Last Login</th>
+                <th className="p-4 font-semibold text-center">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {users.map((user) => (
+                <tr
+                  key={user._id}
+                  className="hover:bg-gray-800/40 transition-colors"
+                >
+                  <td className="p-4">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-600 bg-transparent"
+                    />
+                  </td>
+                  <td className="p-4 text-sm font-medium">{user.username}</td>
+                  <td className="p-4 text-sm text-gray-400">{user.email}</td>
+                  <td className="p-4 text-sm font-bold">${user.balance?.toFixed(4)}</td>
+                  <td className="p-4 text-sm text-gray-400 text-center">{user.type}</td>
+                  <td className="p-4 text-center">
+                    <span className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase ${user.status === 'active' ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}>
+                      {user.status}
+                    </span>
+                  </td>
+                  <td className="p-4 text-sm text-gray-400">
+                    {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Never"}
+                  </td>
+                  <td className="p-4 text-center">
+                    <button
+                      onClick={() => {
+                        setSelectedUserId(user._id);
+                        setActiveTab("Details");
+                      }}
+                      className="text-yellow-500 flex items-center gap-1 mx-auto text-sm font-bold hover:text-yellow-400 uppercase tracking-tighter"
+                    >
+                      <Eye className="w-4 h-4" /> View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && !isLoading && (
+                <tr>
+                  <td colSpan="8" className="p-8 text-center text-gray-500">
+                    No users found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
         <div className="p-4 flex items-center justify-end gap-6 border-t border-gray-800 text-sm text-gray-400">
           <div className="flex items-center gap-2">
             <span>Rows Per Page</span>
-            <div className="bg-[#0b1221] border border-gray-700 rounded px-2 py-1 flex items-center gap-4 cursor-pointer">
-              05 <ChevronDown className="w-4 h-4" />
-            </div>
+            <select
+              className="bg-[#0b1221] border border-gray-700 rounded px-2 py-1 outline-none cursor-pointer"
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              {[5, 10, 20, 50].map((val) => (
+                <option key={val} value={val}>{val}</option>
+              ))}
+            </select>
           </div>
-          <span>Page 01 Of 07</span>
+          <span>Page {pagination.currentPage || 1} Of {pagination.totalPages || 1}</span>
           <div className="flex gap-2">
-            <button className="p-2 border border-gray-700 rounded-lg hover:bg-gray-800">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage(p => p - 1)}
+              className="p-2 border border-gray-700 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <button className="p-2 border border-gray-700 rounded-lg hover:bg-gray-800">
+            <button
+              disabled={page >= pagination.totalPages}
+              onClick={() => setPage(p => p + 1)}
+              className="p-2 border border-gray-700 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -235,54 +219,61 @@ const UserManagement = () => {
       </div>
 
       {/* --- MODAL SECTION --- */}
-      {selectedUser && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0a111a] w-full max-w-[600px] rounded-2xl border border-gray-800 overflow-hidden shadow-2xl">
-            {/* Modal Header */}
-            < div className="p-5 flex justify-between items-center border-b border-gray-800">
+      {selectedUserId && (
+        <UserDetailModal
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
+      )}
+    </div>
+  );
+};
+
+const UserDetailModal = ({ userId, onClose, activeTab, setActiveTab }) => {
+  const { data: userDetails, isLoading } = useGetUserDetailsQuery(userId);
+  const user = userDetails?.data;
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-[#0a111a] w-full max-w-[600px] rounded-2xl border border-gray-800 overflow-hidden shadow-2xl">
+        {isLoading ? (
+          <div className="p-20 flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : user ? (
+          <>
+            <div className="p-5 flex justify-between items-center border-b border-gray-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-xl">
                   👤
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-white">
-                    {selectedUser.username}
+                    {user.username}
                   </h3>
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
-                    Joined Date: {selectedUser.joinedDate}
+                    Joined Date: {new Date(user.createdAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => setSelectedUser(null)}
+                onClick={onClose}
                 className="text-gray-500 hover:text-white transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Quick Stats Grid */}
-            {/* <div className="grid grid-cols-2 gap-3 p-4">
-              <InfoBox label="Email" value={selectedUser.email} />
-              <InfoBox label="Status" value={selectedUser.status} isStatus />
-              <InfoBox label="Balance" value={`$${selectedUser.balance}`} />
-              <InfoBox
-                label="Total Wagered"
-                value={`$${selectedUser.totalWagered}`}
-              />
-              <InfoBox label="User Type" value={selectedUser.type} />
-              <InfoBox label="Total Won" value={`$${selectedUser.totalWon}`} />
-            </div> */}
-
-            {/* Tabs */}
             <div className="flex px-5 gap-6 mt-5 text-[11px] font-bold uppercase border-b border-gray-800">
               {["Details", "Login History", "Game Logs"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`pb-2 transition-all relative ${activeTab === tab
-                      ? "text-yellow-500 border-b-2 border-yellow-500"
-                      : "text-gray-400"
+                    ? "text-yellow-500 border-b-2 border-yellow-500"
+                    : "text-gray-400"
                     }`}
                 >
                   {tab}
@@ -290,7 +281,6 @@ const UserManagement = () => {
               ))}
             </div>
 
-            {/* Tab Content */}
             <div className="p-5 min-h-[250px]">
               {activeTab === "Details" && (
                 <div className="animate-in fade-in duration-300">
@@ -298,19 +288,27 @@ const UserManagement = () => {
                     Account Details
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
-                    <InfoBox label="Email" value={selectedUser.email} />
+                    <InfoBox label="Email" value={user.email} />
                     <InfoBox
                       label="Status"
-                      value={selectedUser.status}
+                      value={user.status}
                       isStatus
                     />
                     <InfoBox
                       label="Balance"
-                      value={`$${selectedUser.balance}`}
+                      value={`$${user.balance?.toFixed(4)}`}
                     />
                     <InfoBox
                       label="Total Wagered"
-                      value={`$${selectedUser.totalWagered}`}
+                      value={`$${user.totalWagered?.toFixed(2) || 0}`}
+                    />
+                    <InfoBox
+                      label="User Role"
+                      value={user.role}
+                    />
+                    <InfoBox
+                      label="Total Won"
+                      value={`$${user.totalWon?.toFixed(2) || 0}`}
                     />
                   </div>
                 </div>
@@ -318,59 +316,31 @@ const UserManagement = () => {
 
               {activeTab === "Login History" && (
                 <div className="animate-in slide-in-from-right duration-300">
-                  <div className="bg-[#1e293b] p-2 rounded-t-lg flex justify-between text-[10px] text-gray-400 font-bold mb-0.5 uppercase px-4">
+                  <div className="bg-[#1e293b] p-2 rounded-t-lg grid grid-cols-3 text-[10px] text-gray-400 font-bold mb-0.5 uppercase px-4">
                     <span>Date & Time</span>
-                    <span>IP Address</span>
-                    <span>Device</span>
+                    <span className="text-center">IP Address</span>
+                    <span className="text-right">Device</span>
                   </div>
-                  <div className="flex justify-between text-[11px] p-4 text-gray-300 bg-[#161f30] rounded-b-lg border border-gray-800">
-                    <span>Nov 15, 2025, 11:28 PM</span>
-                    <span>192.168.1.1</span>
-                    <span>Chrome / Windows</span>
+                  <div className="max-h-[200px] overflow-y-auto">
+                    {user.loginHistory && user.loginHistory.length > 0 ? (
+                      user.loginHistory.map((login, idx) => (
+                        <div key={idx} className="grid grid-cols-3 text-[11px] p-4 text-gray-300 bg-[#161f30] border-b border-gray-800 last:rounded-b-lg last:border-0">
+                          <span>{new Date(login.date).toLocaleString()}</span>
+                          <span className="text-center">{login.ip}</span>
+                          <span className="text-right truncate" title={login.device}>{login.device.split(' ')[0]}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500 text-xs">No login history</div>
+                    )}
                   </div>
                 </div>
               )}
 
               {activeTab === "Game Logs" && (
-                <div className="animate-in slide-in-from-right duration-300 overflow-hidden rounded-lg border border-gray-800">
-                  <table className="w-full text-[10px] text-left">
-                    <thead className="bg-[#1e293b] text-gray-400 uppercase">
-                      <tr>
-                        <th className="p-2">Date</th>
-                        <th className="p-2">Game</th>
-                        <th className="p-2">Stake</th>
-                        <th className="p-2">Payout</th>
-                        <th className="p-2 text-center">Result</th>
-                        <th className="p-2 text-right">Net</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-800 bg-[#161f30]">
-                      <tr className="border-b border-gray-800/50">
-                        <td className="p-2 text-gray-400">12/04/17</td>
-                        <td className="p-2 font-medium">Scratch Card</td>
-                        <td className="p-2 font-medium">$50</td>
-                        <td className="p-2 font-medium">$50</td>
-                        <td className="p-2 text-center text-green-400 font-bold">
-                          Win
-                        </td>
-                        <td className="p-2 text-right text-gray-200">$50</td>
-                      </tr>
-                      <tr>
-                        <td className="p-2 text-gray-400">8/30/14</td>
-                        <td className="p-2 font-medium">Spin Wheel</td>
-                                                <td className="p-2 font-medium">$50</td>
-                        <td className="p-2 font-medium">$50</td>
-                        <td className="p-2 text-center text-red-400 font-bold">
-                          Loss
-                        </td>
-                        <td className="p-2 text-right text-gray-200">$50</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                <GameLogsTab userId={userId} />
               )}
             </div>
-
 
             <div className="p-4 flex gap-3 border-t border-gray-800 bg-[#0f172a]">
               <button className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-[#0b1221] text-xs font-bold py-2.5 rounded-lg transition uppercase">
@@ -380,7 +350,96 @@ const UserManagement = () => {
                 Suspend Account
               </button>
             </div>
+          </>
+        ) : (
+          <div className="p-20 text-center text-gray-500">Failed to load user details</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const GameLogsTab = ({ userId }) => {
+  const [page, setPage] = useState(1);
+  const { data: logsResponse, isLoading } = useGetUserGameLogsQuery({ userId, page, limit: 10 });
+  const logsData = logsResponse?.data;
+  const history = logsData?.history || [];
+  const stats = logsData?.stats;
+  const pagination = logsData?.pagination || {};
+
+  if (isLoading) return <div className="flex justify-center p-10"><div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div></div>;
+
+  return (
+    <div className="animate-in slide-in-from-right duration-300">
+      {stats && (
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="bg-[#161f30] p-2 rounded-lg border border-gray-800 text-center">
+            <p className="text-[9px] text-gray-500 uppercase font-bold">Total Played</p>
+            <p className="text-xs font-bold text-white">{stats.totalGamesPlayed}</p>
           </div>
+          <div className="bg-[#161f30] p-2 rounded-lg border border-gray-800 text-center">
+            <p className="text-[9px] text-gray-500 uppercase font-bold">Total Staked</p>
+            <p className="text-xs font-bold text-teal-400">{stats.totalStaked}</p>
+          </div>
+          <div className="bg-[#161f30] p-2 rounded-lg border border-gray-800 text-center">
+            <p className="text-[9px] text-gray-500 uppercase font-bold">RTP</p>
+            <p className="text-xs font-bold text-yellow-500">{stats.rtp}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-hidden rounded-lg border border-gray-800">
+        <table className="w-full text-[10px] text-left">
+          <thead className="bg-[#1e293b] text-gray-400 uppercase">
+            <tr>
+              <th className="p-2">Date</th>
+              <th className="p-2">Game</th>
+              <th className="p-2">Stake</th>
+              <th className="p-2">Payout</th>
+              <th className="p-2 text-center">Result</th>
+              <th className="p-2 text-right">Net</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-800 bg-[#161f30]">
+            {history.map((log) => (
+              <tr key={log.id} className="border-b border-gray-800/50">
+                <td className="p-2 text-gray-400">{new Date(log.date).toLocaleDateString()}</td>
+                <td className="p-2 font-medium">{log.game}</td>
+                <td className="p-2 font-medium">${log.stake?.toFixed(4)}</td>
+                <td className="p-2 font-medium">${log.payout?.toFixed(4)}</td>
+                <td className={`p-2 text-center font-bold uppercase text-[9px] ${log.result.toLowerCase() === 'win' ? 'text-green-400' : 'text-red-400'}`}>
+                  {log.result}
+                </td>
+                <td className={`p-2 text-right font-medium ${log.net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  ${log.net?.toFixed(4)}
+                </td>
+              </tr>
+            ))}
+            {history.length === 0 && (
+              <tr><td colSpan="6" className="p-4 text-center text-gray-500">No logs found</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {pagination.totalPages > 1 && (
+        <div className="flex justify-end gap-2 mt-4 items-center">
+          <button
+            disabled={page <= 1}
+            onClick={() => setPage(p => p - 1)}
+            className="p-1.5 border border-gray-700 rounded-md hover:bg-gray-800 disabled:opacity-30 transition-colors"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <span className="text-[10px] text-gray-500 font-bold">
+            {page} / {pagination.totalPages}
+          </span>
+          <button
+            disabled={page >= pagination.totalPages}
+            onClick={() => setPage(p => p + 1)}
+            className="p-1.5 border border-gray-700 rounded-md hover:bg-gray-800 disabled:opacity-30 transition-colors"
+          >
+            <ChevronRight size={14} />
+          </button>
         </div>
       )}
     </div>
@@ -393,7 +452,7 @@ const InfoBox = ({ label, value, isStatus }) => (
       {label}
     </p>
     {isStatus ? (
-      <span className="bg-[#1a2d2d] text-[#2dd4bf] border border-[#2dd4bf]/20 px-2 py-0.5 rounded text-[9px] font-bold uppercase">
+      <span className={`border px-2 py-0.5 rounded text-[9px] font-bold uppercase ${value === 'active' ? 'bg-[#1a2d2d] text-[#2dd4bf] border-[#2dd4bf]/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
         {value}
       </span>
     ) : (

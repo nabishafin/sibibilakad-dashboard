@@ -11,7 +11,7 @@ import {
 import { useGetChartDataQuery } from '../redux/features/stats/statsApi';
 
 const WageredChart = () => {
-  const [params, setParams] = useState({ days: 365, period: 'monthly' });
+  const [params] = useState({ days: 365, period: 'monthly' });
   const { data: chartData, isLoading } = useGetChartDataQuery(params);
 
   // Safely access nested data: res.data.wageredAndPaidOut

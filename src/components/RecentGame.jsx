@@ -25,9 +25,9 @@ const InfoBox = ({ label, value, isStatus }) => (
 const RecentGame = () => {
   const [page, setPage] = useState(1);
   const { data: roundsResponse, isLoading } = useGetGameRoundsQuery({ page, limit: 10 });
-  const roundsData = roundsResponse?.data?.rounds || [];
-  const totalRounds = roundsResponse?.data?.total || 0;
-  const totalPages = Math.ceil(totalRounds / 10);
+  const roundsData = roundsResponse?.data || [];
+  const totalRounds = roundsResponse?.pagination?.totalItems || 0;
+  const totalPages = roundsResponse?.pagination?.totalPages || 1;
 
 
   const handlePrevPage = () => {
@@ -49,7 +49,7 @@ const RecentGame = () => {
   });
   const userDetails = userDetailsRes?.data;
 
-  // Fetch User Game Logs - Depend on userDetails._id if available for better reliability
+  // Fetch User Game Logs
   const userIdToFetchLogs = userDetails?._id || selectedRound?.userId;
   const { data: userLogsRes, isFetching: isLogsFetching } = useGetUserGameLogsQuery({ userId: userIdToFetchLogs, page: 1, limit: 20 }, {
     skip: !isProfileModalOpen || !userIdToFetchLogs || activeTab !== "Game Logs"
@@ -58,7 +58,7 @@ const RecentGame = () => {
 
 
   const handleExport = (data) => {
-    const fileName = `round-${data.id}.json`;
+    const fileName = `round-${data.roundId}.json`;
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const href = URL.createObjectURL(blob);
@@ -123,13 +123,13 @@ const RecentGame = () => {
                   <td className="p-4">
 
                   </td>
-                  <td className="p-4 font-bold text-white truncate max-w-[120px]">
-                    {round.id}
+                  <td className="p-4 font-bold text-white truncate max-w-[120px]" title={round.id}>
+                    {round.id?.slice(0, 10)}...
                   </td>
                   <td className="p-4 font-bold text-white">{round.username}</td>
                   <td className="p-4 font-bold text-white">{round.game}</td>
-                  <td className="p-4 font-bold text-white">{round.stake}</td>
-                  <td className="p-4 font-bold text-white">{round.payout}</td>
+                  <td className="p-4 font-bold text-white">${round.stake?.toFixed(4)}</td>
+                  <td className="p-4 font-bold text-white">${round.payout?.toFixed(4)}</td>
                   <td className="p-4">
                     <span className={`px-3 py-1 rounded-md text-xs font-semibold border ${round.status === 'Win' ? 'bg-[#1e293b] text-[#4ade80] border-gray-700' : 'bg-red-900/20 text-red-500 border-red-900/50'}`}>
                       {round.status}
@@ -228,7 +228,7 @@ const RecentGame = () => {
                 </div>
                 <div>
                   <p className="text-[#d4a017] text-sm mb-1">Status</p>
-                  <span className="bg-[#242f3d] text-[#4ade80] text-[10px] px-2 py-0.5 rounded border border-gray-700">
+                  <span className={`text-[10px] px-2 py-0.5 rounded border ${selectedRound.status === 'Win' ? 'bg-[#1e293b] text-[#4ade80] border-gray-700' : 'bg-red-900/20 text-red-500 border-red-900/50'}`}>
                     {selectedRound.status}
                   </span>
                 </div>

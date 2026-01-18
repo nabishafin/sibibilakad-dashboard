@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { setLogin, logout } from "../slices/authSlice";
 
-const BASE_URL = import.meta.env.VITE_BASE_URL || "https://proportion-tahoe-roman-pearl.trycloudflare.com";
+const BASE_URL = import.meta.env.VITE_BASE_URL || "https://many-port-hearts-name.trycloudflare.com";
 
 // Create a base query with automatic token refresh
 const baseQuery = fetchBaseQuery({

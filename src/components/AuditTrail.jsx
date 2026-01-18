@@ -1,10 +1,9 @@
 
-
 import React, { useState, forwardRef } from "react";
-import { Filter, Download, Calendar } from "lucide-react";
+import { Filter, Download, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-
+import { useGetAuditLogsQuery } from "../redux/features/reports/reportsApi";
 
 const CustomInput = forwardRef(({ value, onClick }, ref) => (
   <div
@@ -24,62 +23,28 @@ const AuditTrail = () => {
 
   const [startDate, setStartDate] = useState(lastFiveDays);
   const [endDate, setEndDate] = useState(today);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
 
-  const auditData = [
-    {
-      id: 1,
-      timestamp: "Oct 22, 2025, 11:25 AM",
-      admin: "admin1",
-      type: "User Balance Adjustment",
-      typeColor: "text-red-400",
-      details: "Adjusted balance for user1 by -$850.49",
-      ip: "192.168.123.152",
-    },
-    {
-      id: 2,
-      timestamp: "Oct 22, 2025, 11:25 AM",
-      admin: "admin1",
-      type: "Logout",
-      typeColor: "text-green-400",
-      details: "Action performed on system",
-      ip: "192.168.123.152",
-    },
-    {
-      id: 3,
-      timestamp: "Oct 22, 2025, 11:25 AM",
-      admin: "admin1",
-      type: "User Balance Adjustment",
-      typeColor: "text-red-400",
-      details: "Adjusted balance for user1 by -$850.49",
-      ip: "192.168.123.152",
-    },
-    {
-      id: 4,
-      timestamp: "Oct 22, 2025, 11:25 AM",
-      admin: "admin1",
-      type: "Login",
-      typeColor: "text-blue-400",
-      details: "User logged into system",
-      ip: "192.168.123.152",
-    },
-    {
-      id: 5,
-      timestamp: "Oct 22, 2025, 11:25 AM",
-      admin: "admin1",
-      type: "Round Inspection",
-      typeColor: "text-orange-400",
-      details: "Game round inspected by admin",
-      ip: "192.168.123.152",
-    },
-  ];
+  const { data: auditResponse, isLoading, isFetching } = useGetAuditLogsQuery({
+    page,
+    limit
+  });
 
-  // Uncomment and use if you want CSV export
-  // const handleExport = () => { ... }
+  const auditData = auditResponse?.data || [];
+  const pagination = auditResponse?.pagination || {};
+
+  const getActionColor = (type) => {
+    if (type.includes("Balance")) return "text-red-400";
+    if (type.includes("Login") || type.includes("Configuration")) return "text-blue-400";
+    if (type.includes("Round Inspection")) return "text-orange-400";
+    return "text-green-400";
+  };
 
   return (
-    <div className="mt-12 m-8 text-white font-sans">
+    <div className="mt-12 m-8 text-white font-sans min-h-[600px]">
       {/* Title */}
-      <div className="mb-6">
+      <div className="mb-6 px-4">
         <h2 className="text-2xl font-bold">Audit Trail</h2>
         <p className="text-gray-400 text-sm">
           Track and review all admin actions for security and compliance
@@ -87,7 +52,7 @@ const AuditTrail = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-4 mb-6 bg-[#0a111a] p-4 rounded-xl border border-gray-800">
+      <div className="flex flex-wrap items-center gap-4 mb-6 bg-[#0a111a] p-4 rounded-xl border border-gray-800 mx-4">
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="flex-1 ">
             <DatePicker
@@ -113,17 +78,15 @@ const AuditTrail = () => {
         <button className="flex items-center gap-2 border border-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-800 transition-colors ml-auto">
           <Filter size={16} /> Configure Filters
         </button>
-
-        {/* <button
-          onClick={handleExport}
-          className="flex items-center gap-2 bg-[#2dd4bf]/20 text-[#2dd4bf] border border-[#2dd4bf]/30 px-6 py-2 rounded-lg text-sm font-bold hover:bg-[#2dd4bf]/30 transition-all"
-        >
-          <Download size={16} /> Export
-        </button> */}
       </div>
 
       {/* Audit Table */}
-      <div className="bg-[#0a111a] border border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-[#0a111a] border border-gray-800 rounded-xl overflow-hidden mx-4 relative">
+        {isFetching && (
+          <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px] z-10 flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -135,41 +98,85 @@ const AuditTrail = () => {
                 <th className="px-4 py-4 font-bold">Admin User</th>
                 <th className="px-4 py-4 font-bold">Action Type</th>
                 <th className="px-4 py-4 font-bold">Details</th>
-                <th className="px-4 py-4 font-bold text-right">IP Address</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-gray-800/50">
-              {auditData.map((item) => (
-                <tr
-                  key={item.id}
-                  className="hover:bg-[#121d2b] transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <input type="checkbox" className="accent-teal-500" />
-                  </td>
-                  <td className="px-4 py-4 text-xs text-gray-300 whitespace-nowrap">
-                    {item.timestamp}
-                  </td>
-                  <td className="px-4 py-4 text-sm font-bold">{item.admin}</td>
-                  <td className="px-4 py-4">
-                    <span
-                      className={`text-[10px] font-bold px-3 py-1 rounded-full border border-gray-700 bg-gray-800/50 ${item.typeColor}`}
-                    >
-                      {item.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-xs text-gray-400 max-w-xs truncate">
-                    {item.details}
-                  </td>
-                  <td className="px-4 py-4 text-xs text-gray-400 text-right font-mono">
-                    {item.ip}
-                  </td>
-                </tr>
-              ))}
+              {auditData.length > 0 ? (
+                auditData.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="hover:bg-[#121d2b] transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <input type="checkbox" className="accent-teal-500" />
+                    </td>
+                    <td className="px-4 py-4 text-xs text-gray-300 whitespace-nowrap">
+                      {new Date(item.timestamp).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-4 text-sm font-bold text-teal-500">{item.adminName}</td>
+                    <td className="px-4 py-4">
+                      <span
+                        className={`text-[10px] font-bold px-3 py-1 rounded-full border border-gray-700 bg-gray-800/50 ${getActionColor(item.actionType)}`}
+                      >
+                        {item.actionType}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-xs text-gray-400">
+                      {item.details}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                !isLoading && (
+                  <tr>
+                    <td colSpan="5" className="p-20 text-center text-gray-500 font-medium">
+                      No audit logs found.
+                    </td>
+                  </tr>
+                )
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Section */}
+        {pagination?.totalPages > 1 && (
+          <div className="px-6 py-4 flex items-center justify-end gap-6 border-t border-gray-800 text-sm text-gray-400">
+            <div className="flex items-center gap-2">
+              <span>Rows Per Page</span>
+              <select
+                className="bg-[#0b1221] border border-gray-700 rounded px-2 py-1 outline-none cursor-pointer"
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+              >
+                {[10, 20, 50, 100].map((val) => (
+                  <option key={val} value={val}>{val}</option>
+                ))}
+              </select>
+            </div>
+            <span>Page {pagination.currentPage || 1} Of {pagination.totalPages || 1}</span>
+            <div className="flex gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage(p => p - 1)}
+                className="p-2 border border-gray-700 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                disabled={page >= (pagination.totalPages || 1)}
+                onClick={() => setPage(p => p + 1)}
+                className="p-2 border border-gray-700 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -14,7 +14,8 @@ export const statsApi = baseApi.injectEndpoints({
             providesTags: ["dashboardStats"],
         }),
         getGameRounds: builder.query({
-            query: ({ page = 1, limit = 10 } = {}) => `/admin/rounds?page=${page}&limit=${limit}`,
+            query: ({ page = 1, limit = 20, search = "", status = "" } = {}) =>
+                `/admin/round-explorer?page=${page}&limit=${limit}&search=${search}&status=${status}`,
             providesTags: ["dashboardStats"],
         }),
     }),

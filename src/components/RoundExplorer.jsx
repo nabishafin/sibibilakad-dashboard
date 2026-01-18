@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Download,
@@ -11,46 +11,31 @@ import {
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useGetGameRoundsQuery } from "../redux/features/stats/statsApi";
 
 const RoundExplorer = () => {
-  const [rounds] = useState(
-    Array(15)
-      .fill(null)
-      .map((_, i) => ({
-        roundId: `d29dbee5-ed53-42b2-a4e8-f888ff${i}9`,
-        user: i % 2 === 0 ? "user88" : "player_ace",
-        game: i % 3 === 0 ? "Blackjack" : i % 3 === 1 ? "Roulette" : "Slots",
-        stake: (500 + i * 10).toFixed(2),
-        payout: (600 + i * 12).toFixed(2),
-        status: "Active",
-        timestamp: "Nov 13, 2025, 05:32 AM",
-        fxRate: "0.967",
-        rngData: { seed: "3333a839", initial: "decd4", final: "5d736" },
-      }))
-  );
-
-  const [selectedRound, setSelectedRound] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [gameFilter, setGameFilter] = useState("All Games");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [selectedRound, setSelectedRound] = useState(null);
 
-  const gameOptions = useMemo(() => {
-    const games = rounds.map((r) => r.game);
-    return ["All Games", ...new Set(games)];
-  }, [rounds]);
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  const filteredRounds = useMemo(() => {
-    return rounds.filter((round) => {
-      const searchLower = searchTerm.toLowerCase();
-      const matchesSearch =
-        round.roundId.toLowerCase().includes(searchLower) ||
-        round.user.toLowerCase().includes(searchLower);
+  const { data: roundsResponse, isLoading, isFetching } = useGetGameRoundsQuery({
+    page,
+    limit,
+    search: debouncedSearch,
+    status: statusFilter === "All Status" ? "" : statusFilter
+  });
 
-      const matchesGame =
-        gameFilter === "All Games" || round.game === gameFilter;
-
-      return matchesSearch && matchesGame;
-    });
-  }, [searchTerm, gameFilter, rounds]);
+  const rounds = roundsResponse?.data || [];
+  const pagination = roundsResponse?.pagination || {};
 
   const handleExportAll = () => {
     const doc = new jsPDF("landscape");
@@ -67,14 +52,14 @@ const RoundExplorer = () => {
       "Timestamp",
     ];
 
-    const tableRows = filteredRounds.map((round) => [
-      round.roundId,
-      round.user,
+    const tableRows = rounds.map((round) => [
+      round.id,
+      round.username,
       round.game,
       `$${round.stake}`,
       `$${round.payout}`,
       round.status,
-      round.timestamp,
+      new Date(round.createdAt).toLocaleString(),
     ]);
 
     autoTable(doc, {
@@ -92,10 +77,14 @@ const RoundExplorer = () => {
     doc.setFontSize(16);
     doc.text("Round Details Report", 14, 20);
     doc.setFontSize(10);
-    doc.text(`Round ID: ${round.roundId}`, 14, 35);
-    doc.text(`User: ${round.user}`, 14, 42);
+    doc.text(`Round ID: ${round.id}`, 14, 35);
+    doc.text(`User: ${round.username}`, 14, 42);
     doc.text(`Stake: $${round.stake}`, 14, 49);
-    doc.save(`Round_${round.roundId}.pdf`);
+    doc.text(`Payout: $${round.payout}`, 14, 56);
+    doc.text(`Game: ${round.game}`, 14, 63);
+    doc.text(`Status: ${round.status}`, 14, 70);
+    doc.text(`Date: ${new Date(round.createdAt).toLocaleString()}`, 14, 77);
+    doc.save(`Round_${round.id}.pdf`);
   };
 
   return (
@@ -114,18 +103,24 @@ const RoundExplorer = () => {
               placeholder="Search by User or Round ID"
               className="w-full bg-[#161f30] border border-gray-700 rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:border-teal-500 text-sm"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
 
           <div className="relative">
             <Filter className="absolute left-3 top-2.5 text-gray-500 w-4 h-4" />
             <select
-              value={gameFilter}
-              onChange={(e) => setGameFilter(e.target.value)}
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
               className="bg-[#161f30] border border-gray-700 rounded-lg py-2 pl-9 pr-8 focus:outline-none focus:border-teal-500 text-sm appearance-none cursor-pointer text-gray-300"
             >
-              {gameOptions.map((option) => (
+              {["All Status", "Win", "Loss"].map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -143,7 +138,12 @@ const RoundExplorer = () => {
       </div>
 
       {/* Main Table */}
-      <div className="overflow-x-auto border bg-[#0a111a] border-gray-800 rounded-xl">
+      <div className="overflow-x-auto border bg-[#0a111a] border-gray-800 rounded-xl relative">
+        {(isLoading || isFetching) && (
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px] z-10 flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
         <table className="w-full text-left border-collapse">
           <thead className="bg-[#1e293b] text-gray-400 text-[12px] font-medium uppercase tracking-wider">
             <tr>
@@ -163,10 +163,10 @@ const RoundExplorer = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
-            {filteredRounds.length > 0 ? (
-              filteredRounds.map((round, index) => (
+            {rounds.length > 0 ? (
+              rounds.map((round, index) => (
                 <tr
-                  key={index}
+                  key={round.id}
                   className="hover:bg-[#161f30] transition-colors"
                 >
                   <td className="p-4 text-center">
@@ -175,15 +175,16 @@ const RoundExplorer = () => {
                       className="rounded bg-gray-700 border-none"
                     />
                   </td>
-                  <td className="p-4 text-sm font-bold text-gray-200">
-                    {round.roundId.slice(0, 15)}...
+                  <td className="p-4 text-sm font-bold text-gray-200" title={round.id}>
+                    {round.id.slice(0, 15)}...
                   </td>
-                  <td className="p-4 text-sm text-gray-400">{round.user}</td>
+                  <td className="p-4 text-sm text-gray-400">{round.username}</td>
                   <td className="p-4 text-sm text-gray-300">{round.game}</td>
-                  <td className="p-4 text-sm font-bold">${round.stake}</td>
-                  <td className="p-4 text-sm font-bold">${round.payout}</td>
+                  <td className="p-4 text-sm font-bold">${round.stake?.toFixed(4)}</td>
+                  <td className="p-4 text-sm font-bold">${round.payout?.toFixed(4)}</td>
                   <td className="p-4">
-                    <span className="bg-[#1a2d2d] text-[#2dd4bf] px-3 py-1 rounded text-[10px] font-bold border border-[#2dd4bf]/20">
+                    <span className={`px-3 py-1 rounded text-[10px] font-bold border ${round.status === 'Win' ? 'bg-[#1a2d2d] text-[#2dd4bf] border-[#2dd4bf]/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                      }`}>
                       {round.status}
                     </span>
                   </td>
@@ -198,14 +199,52 @@ const RoundExplorer = () => {
                 </tr>
               ))
             ) : (
-              <tr>
-                <td colSpan="8" className="p-10 text-center text-gray-500">
-                  No rounds found matching your filters.
-                </td>
-              </tr>
+              !isLoading && (
+                <tr>
+                  <td colSpan="8" className="p-10 text-center text-gray-500">
+                    No rounds found matching your filters.
+                  </td>
+                </tr>
+              )
             )}
           </tbody>
         </table>
+
+        {/* Pagination Section */}
+        <div className="p-4 flex items-center justify-end gap-6 border-t border-gray-800 text-sm text-gray-400">
+          <div className="flex items-center gap-2">
+            <span>Rows Per Page</span>
+            <select
+              className="bg-[#0b1221] border border-gray-700 rounded px-2 py-1 outline-none cursor-pointer"
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              {[10, 20, 50, 100].map((val) => (
+                <option key={val} value={val}>{val}</option>
+              ))}
+            </select>
+          </div>
+          <span>Page {pagination.currentPage || 1} Of {pagination.totalPages || 1}</span>
+          <div className="flex gap-2">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage(p => p - 1)}
+              className="p-2 border border-gray-700 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              disabled={page >= pagination.totalPages}
+              onClick={() => setPage(p => p + 1)}
+              className="p-2 border border-gray-700 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {selectedRound && (
@@ -229,60 +268,62 @@ const RoundExplorer = () => {
                   <h4 className="text-gray-300 font-medium text-base mb-4">
                     Basic Information
                   </h4>
-                  <DetailItem label="Round ID" value={selectedRound.roundId} />
-                  <DetailItem label="User" value={selectedRound.user} />
+                  <DetailItem label="Round ID" value={selectedRound.id} />
+                  <DetailItem label="User" value={selectedRound.username} />
                   <DetailItem label="Game Type" value={selectedRound.game} />
                   <DetailItem
                     label="Timestamp"
-                    value={selectedRound.timestamp}
+                    value={new Date(selectedRound.createdAt).toLocaleString()}
                   />
                 </div>
                 <div className="space-y-5">
                   <h4 className="text-gray-300 font-medium text-base mb-4">
                     Financial Details
                   </h4>
-                  <DetailItem label="Stake" value={`$${selectedRound.stake}`} />
+                  <DetailItem label="Stake" value={`$${selectedRound.stake?.toFixed(4)}`} />
                   <DetailItem
                     label="Payout"
-                    value={`$${selectedRound.payout}`}
+                    value={`$${selectedRound.payout?.toFixed(4)}`}
                   />
                   <div>
                     <p className="text-sm text-yellow-500 font-medium mb-1">
                       Status
                     </p>
-                    <span className="bg-[#1a2d2d] text-[#2dd4bf] px-3 py-1 rounded-md text-[11px] font-bold border border-[#2dd4bf]/20 uppercase">
+                    <span className={`px-3 py-1 rounded-md text-[11px] font-bold border uppercase ${selectedRound.status === 'Win' ? 'bg-[#1a2d2d] text-[#2dd4bf] border-[#2dd4bf]/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                       {selectedRound.status}
                     </span>
                   </div>
-                  <DetailItem label="FX Rate" value={selectedRound.fxRate} />
+                  {selectedRound.fxRate && <DetailItem label="FX Rate" value={selectedRound.fxRate} />}
                 </div>
               </div>
 
-              <div className="bg-[#1e2533] rounded-xl p-6 border border-gray-800">
-                <h4 className="text-gray-300 font-medium text-base mb-4">
-                  RNG Data
-                </h4>
-                <div className="bg-[#0b1221] p-4 rounded-lg space-y-3 font-mono">
-                  <p className="text-sm">
-                    <span className="text-yellow-500">Seed:</span>{" "}
-                    <span className="text-gray-300 ml-1">
-                      {selectedRound.rngData.seed}
-                    </span>
-                  </p>
-                  <p className="text-sm">
-                    <span className="text-yellow-500">Initial State:</span>{" "}
-                    <span className="text-gray-300 ml-1">
-                      {selectedRound.rngData.initial}
-                    </span>
-                  </p>
-                  <p className="text-sm">
-                    <span className="text-yellow-500">Final State:</span>{" "}
-                    <span className="text-gray-300 ml-1">
-                      {selectedRound.rngData.final}
-                    </span>
-                  </p>
+              {selectedRound.rngData && (
+                <div className="bg-[#1e2533] rounded-xl p-6 border border-gray-800">
+                  <h4 className="text-gray-300 font-medium text-base mb-4">
+                    RNG Data
+                  </h4>
+                  <div className="bg-[#0b1221] p-4 rounded-lg space-y-3 font-mono">
+                    <p className="text-sm">
+                      <span className="text-yellow-500">Seed:</span>{" "}
+                      <span className="text-gray-300 ml-1">
+                        {selectedRound.rngData.seed}
+                      </span>
+                    </p>
+                    <p className="text-sm">
+                      <span className="text-yellow-500">Initial State:</span>{" "}
+                      <span className="text-gray-300 ml-1">
+                        {selectedRound.rngData.initial}
+                      </span>
+                    </p>
+                    <p className="text-sm">
+                      <span className="text-yellow-500">Final State:</span>{" "}
+                      <span className="text-gray-300 ml-1">
+                        {selectedRound.rngData.final}
+                      </span>
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex gap-4 pt-2">
                 <button

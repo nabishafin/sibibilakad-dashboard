@@ -1,14 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 import SystemReports from "../components/SystemReports";
 import ReportPreview from "../components/ReportPreview";
-import RecentReports from "../components/RecentReports";
 
 const SystemReportsPage = () => {
+  const [selectedReport, setSelectedReport] = useState("User Report");
+
   return (
     <div>
-      <SystemReports />
-      <ReportPreview />
-      <RecentReports />
+      <SystemReports
+        selectedReport={selectedReport}
+        setSelectedReport={setSelectedReport}
+      />
+      <ReportPreview selectedReport={selectedReport} />
     </div>
   );
 };

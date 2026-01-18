@@ -141,12 +141,11 @@ const CustomInput = forwardRef(({ value, onClick }, ref) => (
   </div>
 ));
 
-const SystemReports = () => {
+const SystemReports = ({ selectedReport, setSelectedReport }) => {
   const today = new Date();
   const lastWeek = new Date();
   lastWeek.setDate(today.getDate() - 7);
 
-  const [selectedReport, setSelectedReport] = useState("User Report");
   const [startDate, setStartDate] = useState(lastWeek);
   const [endDate, setEndDate] = useState(today);
 
@@ -173,7 +172,7 @@ const SystemReports = () => {
     },
     {
       id: 4,
-      title: "Platform Report",
+      title: "Performance Report",
       description:
         "Export platform performance metrics including RTP and edge percentages",
       color: "text-teal-500",
@@ -198,10 +197,9 @@ const SystemReports = () => {
               key={report.id}
               onClick={() => setSelectedReport(report.title)}
               className={`cursor-pointer p-6 rounded-xl border-2 transition-all duration-300 flex flex-col items-center text-center h-full
-                ${
-                  selectedReport === report.title
-                    ? "border-yellow-500 bg-[#121d2b]"
-                    : "border-gray-800 hover:border-gray-600 bg-transparent"
+                ${selectedReport === report.title
+                  ? "border-yellow-500 bg-[#121d2b]"
+                  : "border-gray-800 hover:border-gray-600 bg-transparent"
                 }`}
             >
               <FileText

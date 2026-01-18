@@ -116,9 +116,34 @@ export const authApi = baseApi.injectEndpoints({
     // 09. change password (logged-in user)
     changePassword: builder.mutation({
       query: (data) => ({
-        url: `/users/update-admin-password`,
+        url: `/auth/change-password`,
         method: "POST",
         body: data,
+      }),
+      invalidatesTags: ["auth"],
+    }),
+
+    // 10. get profile
+    getProfile: builder.query({
+      query: () => "/users/me",
+      providesTags: ["auth"],
+    }),
+
+    // 11. update profile
+    updateProfile: builder.mutation({
+      query: (data) => ({
+        url: "/users/me",
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: ["auth"],
+    }),
+
+    // 12. delete account
+    deleteAccount: builder.mutation({
+      query: () => ({
+        url: "/users/me",
+        method: "DELETE",
       }),
       invalidatesTags: ["auth"],
     }),
@@ -137,4 +162,7 @@ export const {
   useUpdateUserMutation,
   useRegisterMutation,
   useRecoverPasswordMutation,
+  useGetProfileQuery,
+  useUpdateProfileMutation,
+  useDeleteAccountMutation,
 } = authApi;
