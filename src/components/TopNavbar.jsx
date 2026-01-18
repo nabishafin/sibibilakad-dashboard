@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  Search,
   Bell,
   User,
   Settings,
@@ -145,15 +144,7 @@ const Header = ({ onLogout }) => {
   ];
 
   return (
-    <div className="relative bg-[#0E1624] h-20 px-6 flex items-center justify-between border-b border-white">
-      <div className="relative w-96">
-
-        <input
-          type="text"
-          placeholder="Search ..."
-          className="w-full bg-[#0a111a] border border-gray-700 rounded-xl py-2 pl-10 pr-4 text-gray-300 focus:outline-none focus:border-yellow-600/50"
-        />
-      </div>
+    <div className="relative bg-[#0E1624] h-20 px-6 flex items-center justify-end border-b border-white">
 
       <div className="flex items-center gap-4">
         {/* Notification Dropdown */}
